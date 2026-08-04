@@ -173,3 +173,4 @@ async def start_race(db: dbdep):
     driversNew = await raceStart(selected_circuit, drivers, crashed_drivers)
     print('Ovo je prvi vozac ' + driversNew[0].name + ' | Ovo je poslednji ' + driversNew[-1].name)
 
+
