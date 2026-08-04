@@ -1,6 +1,8 @@
 import Models
 from Models.models import  RaceRequest, DriverRequest
 import random
+from Services.RabbitMQ import messageQueueService as rmq
+from Contracts.mq_contracts.race_messages import start_evt, EventType, RaceMessage
 
 def overtake(d1: DriverRequest, d2: DriverRequest):
     d1_coeff = d1.racing_coeff / 5
@@ -34,6 +36,12 @@ async def raceStart(race: RaceRequest, drivers: list[DriverRequest], crashed: li
                 if res == 'Yes':
                     drivers[driverIdx + 1].crash_coeff = driver.crash_coeff  + 0.00008
                     drivers[driverIdx], drivers[driverIdx + 1] = drivers[driverIdx + 1], drivers[driverIdx]
+        msg = RaceMessage(
+            type=EventType.RACE_STARTED,
+            payload=str(lap) + ' ' + driver.name
+        )
+        msg = msg.model_dump_json()
+        rmq.publishMsg(msg)
 
     return drivers
 
