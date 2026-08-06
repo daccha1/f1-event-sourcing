@@ -1,0 +1,6 @@
+@eventstore_HostAddress = http://localhost:5215
+
+GET {{eventstore_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
