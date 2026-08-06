@@ -5,7 +5,7 @@ namespace eventstore.Events
 	public class Event
 	{
 		public int Id { get; }
-		public Guid EventId { get; set; }
+		public Guid RootId { get; set; }
 		public DateTime OccuredAt { get; } = DateTime.UtcNow;
 
 		public string EventType { get; set; } // for deserialization
@@ -13,7 +13,7 @@ namespace eventstore.Events
 
 		public Event()
 		{
-			EventId = Guid.NewGuid();
+			RootId = Guid.NewGuid();
 			EventType = this.GetType().Name;
 		}
 
