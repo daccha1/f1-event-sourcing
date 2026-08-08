@@ -1,4 +1,5 @@
 ﻿using eventstore.Events;
+using eventstore.Events.Race;
 
 namespace eventstore.Models
 {
@@ -12,7 +13,8 @@ namespace eventstore.Models
 
 	public class Race : DomainRoot
 	{
-		public Guid RaceId { get; set; }
+		public int Id { get; set; }
+		public string RaceId { get; set; }
 		public int Year { get; set; }
 		public string Country { get; set; }
 		public string GrandPrix { get; set; }
@@ -39,7 +41,7 @@ namespace eventstore.Models
 			{
 				EventType = evt.GetType().Name,
 				Payload = Event.Serialize<RaceCreated>(evt),
-				RootId = Guid.Parse(evt.RaceId)
+				RootId = evt.RaceId
 			};
 
 			race.RaiseEvent(baseEvt);
@@ -47,19 +49,66 @@ namespace eventstore.Models
 			return race;
 		}
 
+		public static Race FinishRace(Race race)
+		{
+			var evt = new RaceFinished()
+			{
+				RaceId = race.RaceId,
+				Lap = race.NumberOfLaps
+			};
+
+			var baseEvt = new Event()
+			{
+				EventType = evt.GetType().Name,
+				Payload = Event.Serialize<RaceFinished>(evt),
+				RootId = evt.RaceId
+			};
+
+			race.RaiseEvent(baseEvt);
+			return race;
+		}
+
+		public static Race StopRace(Race race, int lap)
+		{
+			var evt = new RaceStopped()
+			{
+				Lap = lap
+			};
+
+			var baseEvt = new Event()
+			{
+				EventType = evt.GetType().Name,
+				Payload = Event.Serialize<RaceStopped>(evt),
+				RootId = race.RaceId
+			};
+
+			race.RaiseEvent(baseEvt);
+			return race;
+		}
+
+
 		protected override void Apply(Event baseEvt)
 		{
 			switch (baseEvt.EventType)
 			{
 				case "RaceCreated":
-					var evt = Event.Deserialize<RaceCreated>(baseEvt.Payload);
-					RaceId = Guid.Parse(evt.RaceId);
-					Country = evt.Country;
-					GrandPrix = evt.GrandPrixName;
-					NumberOfLaps = evt.Laps;
+					var createdEvt = Event.Deserialize<RaceCreated>(baseEvt.Payload);
+					RaceId = baseEvt.RootId;
+					Country = createdEvt.Country;
+					GrandPrix = createdEvt.GrandPrixName;
+					NumberOfLaps = createdEvt.Laps;
 					CurrentLap = 1;
 					State = RaceState.InProgress;
 					Year = 2025;
+					break;
+				case "RaceFinished":
+					var finishedEvt = Event.Deserialize<RaceFinished>(baseEvt.Payload);
+					CurrentLap = finishedEvt.Lap;
+					break;
+				case "RaceStopped":
+					var stoppedEvt = Event.Deserialize<RaceStopped>(baseEvt.Payload);
+					CurrentLap = stoppedEvt.Lap;
+					State = RaceState.Cancelled;
 					break;
 				default:
 					throw new Exception("Unrecognized event type.");

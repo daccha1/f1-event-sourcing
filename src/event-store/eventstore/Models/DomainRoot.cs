@@ -26,6 +26,8 @@ namespace eventstore.Models
 
 		public void LoadEvents(List<Event> events)
 		{
+			// from db get all events where rootId == guid 
+			
 			foreach (var evt in events)
 			{
 				Apply(evt);
