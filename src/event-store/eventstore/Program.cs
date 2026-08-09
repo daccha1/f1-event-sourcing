@@ -21,6 +21,7 @@ namespace eventstore
 			builder.Services.AddOpenApi();
 
 			builder.Services.AddSingleton<IMemoryStore, RaceMemoryStore>();
+			builder.Services.AddSingleton<IDriverRepository, DriversRepository>();
 			builder.Services.AddSingleton<MemoryDatabase>();
 
 			var app = builder.Build();

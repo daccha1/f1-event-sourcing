@@ -33,8 +33,10 @@ namespace eventstore.Models
 		public bool HasCrashed { get; set; } = false;
 		public DateTime CrashedAt { get; set; }
 
-		/// Overtaks
+		/// Overtakes
 		public int NumberOfOvertakes { get; set; } = 0;
+		public List<string> HasOvertaken { get; set; } = new();
+		public List<string> OvertakenBy { get; set; } = new();
 
 		// PITTED
 		public int NumberOfPits { get; set; } = 0;
@@ -43,7 +45,7 @@ namespace eventstore.Models
 		public bool Disqualified { get; set; } = false;
 		public string DisqualifyReason { get; set; }
 
-		//public List<string> HasOvertaken { get; set; }
+		
 
 		public static Driver StartedRace(string driverId, string raceId)
 		{
@@ -67,6 +69,64 @@ namespace eventstore.Models
 
 		}
 
+		public static Driver FinishedRace(Driver d, int finishPosition)
+		{
+			var evt = new FinishedRace()
+			{
+				DriverId = d.DriverId,
+				RaceId = d.CurrentRaceId,
+				FinishedAt = finishPosition
+			};
+
+			var baseEvt = new Event()
+			{
+				EventType = evt.GetType().Name,
+				Payload = Event.Serialize<FinishedRace>(evt),
+				RootId = d.DriverId
+			};
+
+			d.RaiseEvent(baseEvt);
+			return d;
+		}
+
+		public static Driver Overtook(Driver d, string driverUpfrontId)
+		{
+			var evt = new DriverOvertook()
+			{
+				SubjectDriverId = d.DriverId,
+				TargetDriverId = driverUpfrontId
+			};
+
+			var baseEvt = new Event()
+			{
+				EventType = evt.GetType().Name,
+				Payload = Event.Serialize<DriverOvertook>(evt),
+				RootId = d.DriverId
+			};
+
+			d.RaiseEvent(baseEvt);
+			return d;
+		}
+
+		public static Driver GotOvertaken(Driver d, string driverOvertakerId)
+		{
+			var evt = new DriverOvertaken()
+			{
+				SubjectDriverId = d.DriverId,
+				TargetDriverId = driverOvertakerId
+			};
+
+			var baseEvt = new Event()
+			{
+				EventType = evt.GetType().Name,
+				Payload = Event.Serialize<DriverOvertaken>(evt),
+				RootId = d.DriverId
+			};
+
+			d.RaiseEvent(baseEvt);
+			return d;
+		}
+
 		protected override void Apply(Event baseEvt)
 		{
 			switch (baseEvt.EventType)
@@ -79,6 +139,23 @@ namespace eventstore.Models
 					StartingPosition = 1;
 					HasStarted = true;
 					StartedAt = DateTime.UtcNow;
+					break;
+				case "FinishedRace":
+					var finishedRace = Event.Deserialize<FinishedRace>(baseEvt.Payload);
+					HasFinished = true;
+					FinishedAtPosition = finishedRace.FinishedAt;
+					FinishedAtTime = DateTime.UtcNow;
+					break;
+				case "DriverOvertook":
+					var overtakenEvent = Event.Deserialize<DriverOvertook>(baseEvt.Payload);
+					CurrentPosition = CurrentPosition - 1;
+					NumberOfOvertakes++;
+					HasOvertaken.Add(overtakenEvent.TargetDriverId);
+					break;
+				case "DriverOvertaken":
+					var gotOvertaken = Event.Deserialize<DriverOvertaken>(baseEvt.Payload);
+					CurrentPosition = CurrentPosition - 1;
+					OvertakenBy.Add(gotOvertaken.TargetDriverId);
 					break;
 				default:
 					throw new Exception("Unrecognized event type.");
