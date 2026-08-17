@@ -38,7 +38,7 @@ async def raceStart(race: RaceRequest, drivers: list[DriverRequest], crashed: li
                     drivers[driverIdx], drivers[driverIdx + 1] = drivers[driverIdx + 1], drivers[driverIdx]
         msg = RaceMessage(
             type=EventType.RACE_STARTED,
-            payload=str(lap) + ' ' + driver.name
+            payload=str(lap+1) + ' ' + drivers[0].name
         )
         msg = msg.model_dump_json()
         rmq.publishMsg(msg)

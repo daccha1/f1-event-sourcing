@@ -8,9 +8,9 @@ connection = pika.BlockingConnection(
     pika.ConnectionParameters(host='localhost'))
 channel = connection.channel()
 
-race_exchange = "race"
-race_queue = "race-events"
-race_routing_key = "race-route"
+race_exchange = "simulatorExchange"
+race_queue = "raceevents"
+race_routing_key = "raceroute"
 
 channel.exchange_declare(exchange=race_exchange, exchange_type=ExchangeType.direct)
 
@@ -19,6 +19,7 @@ channel.queue_declare(
     queue=race_queue,
     durable=True,
     passive=False,
+    exclusive=False
 )
 
 channel.queue_bind(

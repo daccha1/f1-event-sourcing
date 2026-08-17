@@ -10,6 +10,8 @@ namespace eventstore.Controllers
 		public record Driver_Overtook(Guid driverFront, Guid driverBehind);
 		public record Driver_FinishedRace(Guid driverId, Guid raceId, int position);
 		public record Driver_StartRace(Guid driverId, Guid raceId);
+		public record Driver_Disqualify(Guid driverId, string reason);
+		public record Driver_Pitted(Guid driverId, char tyreType);
 	}
 
 	[ApiController]
@@ -68,6 +70,21 @@ namespace eventstore.Controllers
 			return Ok(d);
 		}
 
+		[HttpPost("disqualify")]
+		public IActionResult Disqualified([FromBody] ControllerHelper.Driver_Disqualify information)
+		{
+			string driverId = information.driverId.ToString("N");
+			Driver d = _repo.Disqualified(driverId, information.reason);
+			return Ok(d);
+		}
+
+		[HttpPost("pit")]
+		public IActionResult Pitted([FromBody] ControllerHelper.Driver_Pitted information)
+		{
+			string driverId = information.driverId.ToString("N");
+			Driver d = _repo.Pitted(driverId, information.tyreType);
+			return Ok(d);
+		}
 
 	}
 }

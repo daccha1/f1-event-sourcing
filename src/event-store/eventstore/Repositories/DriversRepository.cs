@@ -21,10 +21,6 @@ namespace eventstore.Repositories
 			throw new NotImplementedException();
 		}
 
-		public Driver Disqualified(string driverId, string reason)
-		{
-			throw new NotImplementedException();
-		}
 		public Driver Overtook(string driverFront, string driverBehind)
 		{
 			Driver d1 = Load(driverFront);
@@ -36,11 +32,6 @@ namespace eventstore.Repositories
 			Events.AddRange(d1.DequeueUnsavedEvents());
 
 			return d2;
-		}
-
-		public Driver Pit(string driverId, string tyreType)
-		{
-			throw new NotImplementedException();
 		}
 
 		public Driver StartedTheRace(string driverId, string raceId)
@@ -61,6 +52,23 @@ namespace eventstore.Repositories
 			Driver d = new();
 			d.LoadEvents(evts);
 			return d;
+		}
+
+		public Driver Pitted(string driverId, char tyreType)
+		{
+			Driver d = Load(driverId);
+			d = Driver.Pitted(d, tyreType);
+			Events.AddRange(d.DequeueUnsavedEvents());
+			return d;
+		}
+
+		public Driver Disqualified(string driverId, string reason)
+		{
+			Driver d = Load(driverId);
+			d = Driver.GotDisqualified(d, reason);
+			Events.AddRange(d.DequeueUnsavedEvents());
+			return d;
+
 		}
 
 		public Driver FinishedRace(string driverId, int position)

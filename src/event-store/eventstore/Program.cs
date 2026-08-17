@@ -1,7 +1,9 @@
 
 using eventstore.Data;
+using eventstore.HostedServices;
 using eventstore.Models;
 using eventstore.Repositories;
+using eventstore.Services.RabbitMQ;
 using System.Diagnostics;
 
 namespace eventstore
@@ -23,6 +25,10 @@ namespace eventstore
 			builder.Services.AddSingleton<IMemoryStore, RaceMemoryStore>();
 			builder.Services.AddSingleton<IDriverRepository, DriversRepository>();
 			builder.Services.AddSingleton<MemoryDatabase>();
+			builder.Services.AddSingleton<IMQClient, MQClient>();
+			builder.Services.AddScoped<IReceivedMessageHandler, ReceivedMessageHandler>();
+
+			builder.Services.AddHostedService<MQBackgroundService>();
 
 			var app = builder.Build();
 

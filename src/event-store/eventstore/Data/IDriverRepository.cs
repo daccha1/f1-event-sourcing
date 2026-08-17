@@ -11,7 +11,7 @@ namespace eventstore.Data
 		public Driver Overtook(string driverFront, string driverBehind);
 		public Driver Crashed(string driverId);
 		public Driver Disqualified(string driverId, string reason); // wait for implementation
-		public Driver Pit(string driverId, string tyreType);
+		public Driver Pitted(string driverId, char tyreType);
 
 	}
 }
