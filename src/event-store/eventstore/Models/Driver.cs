@@ -17,7 +17,7 @@ namespace eventstore.Models
 		public string CurrentRaceId { get; set; }
 
 		public int CurrentPosition { get; set; }
-		public TyreType CurrentTyres = TyreType.Medium;
+		public TyreType CurrentTyres { get; set; } = TyreType.Medium;
 		
 		// START
 		public int StartingPosition { get; set; }
@@ -127,6 +127,53 @@ namespace eventstore.Models
 			return d;
 		}
 
+		private TyreType ResolveTyreType(char type)
+		{
+			if (type == 'S') return TyreType.Soft;
+			if (type == 'M') return TyreType.Medium;
+			if (type == 'H') return TyreType.Hard;
+			if (type == 'W') return TyreType.Wet;
+			return TyreType.Soft;
+		}
+
+		public static Driver Pitted(Driver d, char tyreType)
+		{
+			var evt = new Pitted()
+			{
+				DriverId = d.DriverId,
+				TyreType = tyreType
+			};
+
+			var baseEvt = new Event()
+			{
+				EventType = evt.GetType().Name,
+				Payload = Event.Serialize<Pitted>(evt),
+				RootId = d.DriverId
+			};
+
+			d.RaiseEvent(baseEvt);
+			return d;
+		}
+
+		public static Driver GotDisqualified(Driver d, string reason)
+		{
+			var evt = new Disqualified()
+			{
+				DriverId = d.DriverId,
+				Reason = reason
+			};
+
+			var baseEvt = new Event()
+			{
+				EventType = evt.GetType().Name,
+				Payload = Event.Serialize<Disqualified>(evt),
+				RootId = d.DriverId
+			};
+
+			d.RaiseEvent(baseEvt);
+			return d;
+		}
+
 		protected override void Apply(Event baseEvt)
 		{
 			switch (baseEvt.EventType)
@@ -156,6 +203,16 @@ namespace eventstore.Models
 					var gotOvertaken = Event.Deserialize<DriverOvertaken>(baseEvt.Payload);
 					CurrentPosition = CurrentPosition - 1;
 					OvertakenBy.Add(gotOvertaken.TargetDriverId);
+					break;
+				case "Disqualified":
+					var driverDisqualified= Event.Deserialize<Disqualified>(baseEvt.Payload);
+					Disqualified = true;
+					DisqualifyReason = driverDisqualified.Reason;
+					break;
+				case "Pitted":
+					var driverPitted = Event.Deserialize<Pitted>(baseEvt.Payload);
+					NumberOfPits++;
+					CurrentTyres = (TyreType) ResolveTyreType(driverPitted.TyreType);
 					break;
 				default:
 					throw new Exception("Unrecognized event type.");
