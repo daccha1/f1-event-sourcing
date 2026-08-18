@@ -127,7 +127,7 @@ from Data.dbSchemas import Race, Driver
 from Data.database import SessionLocal, get_db, Base, engine
 from typing import Annotated
 from sqlalchemy.orm import Session
-from Models.models import DriverRequest, DriverResponse, RaceRequest, RaceResponse
+from Models.models import DriverRequest, DriverResponse, RaceRequest, RaceResponse, RacingDriver
 from typing import List
 from Repository.racingFunctions import raceStart
 
@@ -164,13 +164,34 @@ async def add_driver(db:dbdep, driver: DriverRequest):
 
 
 @app.post('/race/start')
-async def start_race(db: dbdep):
+def start_race(db: dbdep, seed: int | None = None):
     circuit = db.query(Race).all()
     selected_circuit = circuit[1]
-    drivers = db.query(Driver).all()
-    crashed_drivers = []
-    print('Ovo je prvi vozac ' + drivers[0].name + ' | Ovo je poslednji ' + drivers[-1].name)
-    driversNew = await raceStart(selected_circuit, drivers, crashed_drivers)
-    print('Ovo je prvi vozac ' + driversNew[0].name + ' | Ovo je poslednji ' + driversNew[-1].name)
+    grid = [
+        RacingDriver(
+            driver_id=d.id,
+            name=d.name,
+            team=d.team,
+            racing_coeff=d.racing_coeff,
+            crash_coeff=d.crash_coeff,
+            pit_coeff=d.pit_coeff,
+        )
+        for d in db.query(Driver).all()
+    ]
+    crashed_drivers: list[RacingDriver] = []
+    classification = raceStart(selected_circuit, grid, crashed_drivers, seed=seed)
+
+    return {
+        'race': selected_circuit.name,
+        'seed': seed,
+        'classification': [
+            {'position': d.finished_position, 'driver_id': d.driver_id, 'name': d.name}
+            for d in classification
+        ],
+        'dnf': [
+            {'driver_id': d.driver_id, 'name': d.name, 'lap': d.crashed_on_lap}
+            for d in crashed_drivers
+        ],
+    }
 
 

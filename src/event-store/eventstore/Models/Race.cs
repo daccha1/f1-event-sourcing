@@ -104,6 +104,7 @@ namespace eventstore.Models
 				case "RaceFinished":
 					var finishedEvt = Event.Deserialize<RaceFinished>(baseEvt.Payload);
 					CurrentLap = finishedEvt.Lap;
+					State = RaceState.Finished;
 					break;
 				case "RaceStopped":
 					var stoppedEvt = Event.Deserialize<RaceStopped>(baseEvt.Payload);
