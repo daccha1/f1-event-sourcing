@@ -1,47 +1,72 @@
-import Models
-from Models.models import  RaceRequest, DriverRequest
 import random
+
+from Contracts.mq_contracts.race_messages import EventType, RaceMessage
+from Data.dbSchemas import Race
+from Models.models import RacingDriver
 from Services.RabbitMQ import messageQueueService as rmq
-from Contracts.mq_contracts.race_messages import start_evt, EventType, RaceMessage
 
-def overtake(d1: DriverRequest, d2: DriverRequest):
-    d1_coeff = d1.racing_coeff / 5
-    d2_coeff = d2.racing_coeff / 5
-    res = random.choices(['No', 'Yes'], weights=[d1_coeff, d2_coeff])[0]
-    print(d1.name + ' ' + res)
-    return res;
+CRASH_RISK_PER_LAP = 0.00008
+CRASH_RISK_PER_OVERTAKE = 0.00008
+MAX_CRASH_PROBABILITY = 0.95
 
-def pit(d: DriverRequest, last_index: int):
+
+def resolve_crash(driver: RacingDriver, rng: random.Random) -> bool:
+    return rng.random() < min(driver.crash_coeff, MAX_CRASH_PROBABILITY)
+
+
+def wins_duel(attacker: RacingDriver, defender: RacingDriver, rng: random.Random) -> bool:
+    total = attacker.racing_coeff + defender.racing_coeff
+    if total <= 0:
+        return False
+    return rng.random() < attacker.racing_coeff / total
+
+
+def pit(d: RacingDriver, last_index: int):
     d.pits = d.pits + 1
 
-def resolve_crash(driver):
-    res = random.choices(['Yes', 'No'], weights=[driver.crash_coeff, (1-driver.crash_coeff)])[0]
-    return res;
 
-async def raceStart(race: RaceRequest, drivers: list[DriverRequest], crashed: list[DriverRequest]):
-    for lap in range(race.laps):
-        print(race.name + ' ' + str(lap))
-        for driver in drivers:
-            crash_res = resolve_crash(driver)
-            if crash_res == "Yes":
-                print(driver.name + ' has crashed.')
+def raceStart(
+    race: Race,
+    drivers: list[RacingDriver],
+    crashed: list[RacingDriver],
+    seed: int | None = None,) -> list[RacingDriver]:
+    rng = random.Random(seed) # definise randomness i paralelizam (dve trke pokrenute istovremeno bez rng imaju isti output na kraju)
+
+    msg = RaceMessage(
+        type=EventType.RACE_STARTED,
+        payload=f"The race has been started: {race.name}",
+    )
+
+    for lap in range(1, race.laps + 1):
+        # Iterira se preko kopije jer `drivers` menja duzinu unutar petlje.
+        for driver in list(drivers):
+            if resolve_crash(driver, rng):
+                driver.crashed_on_lap = lap
                 crashed.append(driver)
                 drivers.remove(driver)
                 continue
-            driver.crash_coeff = driver.crash_coeff + 0.00008
-            driver.pit_coeff = driver.pit_coeff + 0.04
-            driverIdx = drivers.index(driver)
-            if driverIdx != len(drivers) - 1:
-                res = overtake(driver, drivers[drivers.index(driver) + 1])
-                if res == 'Yes':
-                    drivers[driverIdx + 1].crash_coeff = driver.crash_coeff  + 0.00008
-                    drivers[driverIdx], drivers[driverIdx + 1] = drivers[driverIdx + 1], drivers[driverIdx]
-        msg = RaceMessage(
-            type=EventType.RACE_STARTED,
-            payload=str(lap+1) + ' ' + drivers[0].name
-        )
-        msg = msg.model_dump_json()
-        rmq.publishMsg(msg)
+            driver.crash_coeff += CRASH_RISK_PER_LAP
+            driver.pit_coeff += 0.04
+
+        if not drivers:
+            break
+
+        # Odzada napred; `moved` ogranicava vozaca na jedan duel i jedan pomak po lapu.
+        moved: set[int] = set()
+        for i in range(len(drivers) - 1, 0, -1):
+            attacker, defender = drivers[i], drivers[i - 1]
+            if attacker.driver_id in moved:
+                continue
+            if wins_duel(attacker, defender, rng):
+                attacker.crash_coeff += CRASH_RISK_PER_OVERTAKE
+                drivers[i - 1], drivers[i] = attacker, defender
+                moved.add(attacker.driver_id)
+
+
+        rmq.publishMsg(msg.model_dump_json())
+
+    for position, driver in enumerate(drivers, start=1):
+        driver.finished_position = position
 
     return drivers
 

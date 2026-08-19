@@ -185,17 +185,17 @@ namespace eventstore.Models
 					CurrentPosition = 1;
 					StartingPosition = 1;
 					HasStarted = true;
-					StartedAt = DateTime.UtcNow;
+					StartedAt = DateTime.UtcNow; // needs to be in payload
 					break;
 				case "FinishedRace":
 					var finishedRace = Event.Deserialize<FinishedRace>(baseEvt.Payload);
 					HasFinished = true;
 					FinishedAtPosition = finishedRace.FinishedAt;
-					FinishedAtTime = DateTime.UtcNow;
+					FinishedAtTime = DateTime.UtcNow; // needs to be in payload
 					break;
 				case "DriverOvertook":
 					var overtakenEvent = Event.Deserialize<DriverOvertook>(baseEvt.Payload);
-					CurrentPosition = CurrentPosition - 1;
+					CurrentPosition = CurrentPosition + 1;
 					NumberOfOvertakes++;
 					HasOvertaken.Add(overtakenEvent.TargetDriverId);
 					break;
