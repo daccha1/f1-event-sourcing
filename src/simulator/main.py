@@ -123,9 +123,12 @@
 #     print(driver.name)
 
 from fastapi import FastAPI, Depends
+from sentry_sdk.integrations import sqlalchemy
+
 from Data.dbSchemas import Race, Driver
 from Data.database import SessionLocal, get_db, Base, engine
 from typing import Annotated
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from Models.models import DriverRequest, DriverResponse, RaceRequest, RaceResponse, RacingDriver
 from typing import List
@@ -151,7 +154,7 @@ async def add_race(db:dbdep, race: RaceRequest):
 
 @app.get('/drivers', response_model=List[DriverResponse])
 async def get_drivers(db: dbdep):
-    return db.query(Driver).all()
+    return db.scalars(select(Driver)).all()
 
 @app.post('/drivers/new', response_model=DriverResponse)
 async def add_driver(db:dbdep, driver: DriverRequest):
@@ -164,9 +167,9 @@ async def add_driver(db:dbdep, driver: DriverRequest):
 
 
 @app.post('/race/start')
-def start_race(db: dbdep, seed: int | None = None):
-    circuit = db.query(Race).all()
-    selected_circuit = circuit[1]
+def start_race(db: dbdep, id: int, seed: int | None = None):
+    circuit = db.scalars(select(Race).where(Race.id == id)).first()
+    selected_circuit = circuit
     grid = [
         RacingDriver(
             driver_id=d.id,

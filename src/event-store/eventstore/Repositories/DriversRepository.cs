@@ -8,14 +8,13 @@ namespace eventstore.Repositories
 {
 	public class DriversRepository : IDriverRepository
 	{
-		private MemoryDatabase _db;
+		private EventStoreDbContext _context;
 		private List<Event> Events; 
-		public DriversRepository(MemoryDatabase db)
+		public DriversRepository(EventStoreDbContext db)
 		{
-			_db = db;
-			Events = _db.Events;
+			_context = db;
 		}
-
+		
 		public Driver Crashed(string driverId)
 		{
 			throw new NotImplementedException();
@@ -27,23 +26,24 @@ namespace eventstore.Repositories
 			Driver d2 = Load(driverBehind);
 
 			d2 = Driver.Overtook(d2, driverFront);
-			Events.AddRange(d2.DequeueUnsavedEvents());
+			_context.Events.AddRange(d2.DequeueUnsavedEvents());
 			d1 = Driver.GotOvertaken(d1, driverBehind);
-			Events.AddRange(d1.DequeueUnsavedEvents());
+			_context.Events.AddRange(d1.DequeueUnsavedEvents());
 
 			return d2;
 		}
 
-		public Driver StartedTheRace(string driverId, string raceId)
+		public async Task<Driver> StartedTheRace(string driverId, string raceId)
 		{
 			Driver d = Driver.StartedRace(driverId, raceId);
-			Events.AddRange(d.DequeueUnsavedEvents());
+			await _context.Events.AddRangeAsync(d.DequeueUnsavedEvents());
+			await _context.SaveChangesAsync();
 			return d;
 		}
 
 		public Driver Load(string driverId)
 		{
-			var evts = Events.Where(e => e.RootId == driverId).ToList();
+			var evts = _context.Events.Where(e => e.RootId == driverId).ToList();
 			if (evts.Count == 0)
 			{
 				throw new Exception("List is empty");
@@ -58,7 +58,7 @@ namespace eventstore.Repositories
 		{
 			Driver d = Load(driverId);
 			d = Driver.Pitted(d, tyreType);
-			Events.AddRange(d.DequeueUnsavedEvents());
+			_context.Events.AddRange(d.DequeueUnsavedEvents());
 			return d;
 		}
 
@@ -66,7 +66,7 @@ namespace eventstore.Repositories
 		{
 			Driver d = Load(driverId);
 			d = Driver.GotDisqualified(d, reason);
-			Events.AddRange(d.DequeueUnsavedEvents());
+			_context.Events.AddRange(d.DequeueUnsavedEvents());
 			return d;
 
 		}
@@ -75,7 +75,7 @@ namespace eventstore.Repositories
 		{
 			var driver = Load(driverId);
 			driver = Driver.FinishedRace(driver, position);
-			Events.AddRange(driver.DequeueUnsavedEvents());
+			_context.Events.AddRange(driver.DequeueUnsavedEvents());
 			return driver;
 		}
 	}

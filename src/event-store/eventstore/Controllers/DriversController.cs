@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace eventstore.Controllers
 {
 
-	public class ControllerHelper
+	public partial class ControllerHelper
 	{
 		public record Driver_Overtook(Guid driverFront, Guid driverBehind);
 		public record Driver_FinishedRace(Guid driverId, Guid raceId, int position);
@@ -31,8 +31,8 @@ namespace eventstore.Controllers
 			{
 				string str_driver = obj.driverId.ToString("N");
 				string str_race = obj.raceId.ToString("N");
-				Driver d = _repo.StartedTheRace(str_driver, str_race);
-				return Ok(d);
+				//Driver d = _repo.StartedTheRace(str_driver, str_race);
+				return Ok();
 			}
 			catch (Exception ex)
 			{

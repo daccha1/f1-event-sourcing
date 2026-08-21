@@ -1,8 +1,8 @@
-from enum import Enum
 import uuid
-from pydantic import Field
+from datetime import datetime
+from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class EventType(Enum):
@@ -13,13 +13,10 @@ class EventType(Enum):
     #DRIVER_PITSTOP
     #DRIVER_FINISHED
 
-class RaceMessage(BaseModel):
-    id: str = Field(default_factory=lambda: uuid.uuid4().hex)
-    type: EventType
-    # JSON string (deserializes based on the EventType)
-    payload: str = ""
+class EventWrapper(BaseModel):
+    CorrelationId : str = Field(default_factory=lambda: str(uuid.uuid4()))
+    Payload : str
+    EventType : str
+    OcurredAt : datetime
 
-start_evt = RaceMessage(
-    type=EventType.RACE_STARTED
-)
 
