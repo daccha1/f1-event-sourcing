@@ -3,29 +3,37 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace eventstore.Controllers
 {
+
+	public partial class ControllerHelper
+	{
+		public record CreateRace(Guid raceId, string country, string gp, int laps);
+		public record FinishRace(Guid raceId);
+		public record StopRace(Guid raceId, int lap);
+	}
+
 	[ApiController]
 	[Route("api/[controller]")]
 	public class RacesController : ControllerBase
 	{
-		private IMemoryStore races;
-		public RacesController(IMemoryStore races)
+		private IRaceRepository races;
+		public RacesController(IRaceRepository races)
 		{
 			this.races = races;
 		}
 
 		[HttpPost]
-		public IActionResult CreateRace([FromBody] Guid raceId)
+		public IActionResult CreateRace([FromBody] ControllerHelper.CreateRace createRace)
 		{
-			string raceIdentificator = raceId.ToString("N");
-			var r = races.AddNew(raceIdentificator, "Monaco", "MGP", 61);
+			string raceIdentificator = createRace.raceId.ToString("N");
+			var r = races.AddNew(raceIdentificator, createRace.country, createRace.gp, createRace.laps);
 
 			return Ok(r);
 		}
 
 		[HttpPost("finish")]
-		public IActionResult FinishRace([FromBody] Guid raceId)
+		public IActionResult FinishRace([FromBody] ControllerHelper.FinishRace finishRace)
 		{
-			string raceIdentificator = raceId.ToString("N");
+			string raceIdentificator = finishRace.raceId.ToString("N");
 
 			var r = races.FinishRace(raceIdentificator);
 
@@ -34,10 +42,10 @@ namespace eventstore.Controllers
 		}
 
 		[HttpPost("stop")]
-		public IActionResult StopRace([FromBody] Guid raceId, int lap)
+		public IActionResult StopRace([FromBody] ControllerHelper.StopRace stopRace)
 		{
-			string raceIdentificator = raceId.ToString("N");
-			var r = races.StopRace(raceIdentificator, lap);
+			string raceIdentificator = stopRace.raceId.ToString("N");
+			var r = races.StopRace(raceIdentificator, stopRace.lap);
 			return Ok(r);
 		}
 

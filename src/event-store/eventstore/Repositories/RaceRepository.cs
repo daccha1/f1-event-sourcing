@@ -1,25 +1,26 @@
 ﻿using eventstore.Data;
 using eventstore.Events;
 using eventstore.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace eventstore.Repositories
 {
-	public class RaceMemoryStore : IMemoryStore
+	public class RaceRepository : IRaceRepository
 	{
 		public List<Event> Events;
-		public MemoryDatabase _db;
+		public EventStoreDbContext _context;
 
-		public RaceMemoryStore(MemoryDatabase db)
+		public RaceRepository(EventStoreDbContext db)
 		{
-			_db = db;
-			Events = _db.Events;
+			_context = db;
 		}
+		
 
 		public Race FinishRace(string id)
 		{
 			var race = Load(id);
 			race = Race.FinishRace(race);
-			Events.AddRange(race.DequeueUnsavedEvents());
+			_context.Events.AddRange(race.DequeueUnsavedEvents());
 			return race;
 		}
 
@@ -27,13 +28,13 @@ namespace eventstore.Repositories
 		{
 			var race = Load(id);
 			race = Race.StopRace(race, lap);
-			Events.AddRange(race.DequeueUnsavedEvents());
+			_context.Events.AddRange(race.DequeueUnsavedEvents());
 			return race;
 		}
 
 		public Race Load(string raceId)
 		{
-			var evts = Events.Where(e => e.RootId == raceId).ToList();
+			var evts = _context.Events.Where(e => e.RootId == raceId).ToList();
 			if(evts.Count == 0)
 			{
 				throw new Exception("List is empty");
@@ -47,7 +48,7 @@ namespace eventstore.Repositories
 		public Race AddNew(string id, string ctr, string gp, int laps)
 		{
 			var race = Race.Create(id, ctr, gp, laps);
-			Events.AddRange(race.DequeueUnsavedEvents());
+			_context.Events.AddRange(race.DequeueUnsavedEvents());
 			return race;
 		}
 

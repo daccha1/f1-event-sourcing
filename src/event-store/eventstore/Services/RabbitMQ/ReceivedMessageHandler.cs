@@ -1,4 +1,5 @@
-﻿using eventstore.Data;
+﻿using eventstore.Controllers;
+using eventstore.Data;
 using eventstore.Shared_data.Events;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -26,15 +27,17 @@ namespace eventstore.Services.RabbitMQ
 		{
 			string eventBody = Encoding.UTF8.GetString(eventArguments.Body.Span.ToArray());
 			Console.WriteLine(eventBody);
-			//EventWrapper eventWrapper = JsonSerializer.Deserialize<EventWrapper>(eventBody);
+			EventWrapper eventWrapper = JsonSerializer.Deserialize<EventWrapper>(eventBody);
 
-			//switch (eventWrapper.EventType)
-			//{
-			//	case "Event":
-			//		break;
-			//	default:
-			//		throw new Exception();
-			//}
+			switch (eventWrapper.EventType)
+			{
+				case "StartedRace":
+					ControllerHelper.Driver_StartRace startRace = JsonSerializer.Deserialize<ControllerHelper.Driver_StartRace>(eventWrapper.Payload);
+					await _driverRepository.StartedTheRace(startRace.driverId.ToString(), startRace.raceId.ToString());
+					break;
+				default:
+					throw new Exception();
+			}
 
 
 		}

@@ -4,6 +4,7 @@ using eventstore.HostedServices;
 using eventstore.Models;
 using eventstore.Repositories;
 using eventstore.Services.RabbitMQ;
+using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 
 namespace eventstore
@@ -18,12 +19,14 @@ namespace eventstore
 			// Add services to the container.
 
 			builder.Services.AddControllers();
+			builder.Services.AddSqlServer<EventStoreDbContext>(
+				builder.Configuration.GetConnectionString("EventStoreDatabase"));
 			
 			// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 			builder.Services.AddOpenApi();
 
-			builder.Services.AddSingleton<IMemoryStore, RaceMemoryStore>();
-			builder.Services.AddSingleton<IDriverRepository, DriversRepository>();
+			builder.Services.AddScoped<IRaceRepository, RaceRepository>();
+			builder.Services.AddScoped<IDriverRepository, DriversRepository>();
 			builder.Services.AddSingleton<MemoryDatabase>();
 			builder.Services.AddSingleton<IMQClient, MQClient>();
 			builder.Services.AddScoped<IReceivedMessageHandler, ReceivedMessageHandler>();

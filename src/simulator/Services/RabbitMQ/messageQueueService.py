@@ -2,7 +2,8 @@ import pika
 from pika import exchange_type
 from pika.exchange_type import ExchangeType
 import json
-from Contracts.mq_contracts.race_messages import start_evt, EventType, RaceMessage
+
+from Contracts.mq_contracts.race_messages import EventWrapper
 
 connection = pika.BlockingConnection(
     pika.ConnectionParameters(host='localhost'))
@@ -28,9 +29,9 @@ channel.queue_bind(
     routing_key=race_routing_key
 )
 
-
-def publishMsg(msg, exchange=race_exchange, routing_key=race_routing_key):
-    msgJson = json.dumps(msg)
+        #EventWrapper
+def publishMsg(msg:EventWrapper, exchange=race_exchange, routing_key=race_routing_key):
+    msgJson = msg.model_dump_json()
     msgBytes = msgJson.encode('utf-8')
     basic_properties = pika.BasicProperties()
     channel.basic_publish(

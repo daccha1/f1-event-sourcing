@@ -12,7 +12,6 @@ namespace eventstore.Models
 	}
 	public class Driver : DomainRoot
 	{
-		public int Id { get; set; }
 		public string DriverId { get; set; }
 		public string CurrentRaceId { get; set; }
 

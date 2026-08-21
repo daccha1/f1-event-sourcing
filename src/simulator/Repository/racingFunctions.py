@@ -1,9 +1,15 @@
+from datetime import datetime
+import json
 import random
 
-from Contracts.mq_contracts.race_messages import EventType, RaceMessage
+from Contracts.mq_contracts.race_messages import EventType, EventWrapper
 from Data.dbSchemas import Race
 from Models.models import RacingDriver
 from Services.RabbitMQ import messageQueueService as rmq
+from Events.DriverEvents import driver_events
+from Events.DriverEvents.driver_events import StartedRace, FinishedRace, DriverOvertook, Pitted, Disqualified
+import uuid
+from Services.RabbitMQ.messageQueueService import publishMsg
 
 CRASH_RISK_PER_LAP = 0.00008
 CRASH_RISK_PER_OVERTAKE = 0.00008
@@ -32,10 +38,21 @@ def raceStart(
     seed: int | None = None,) -> list[RacingDriver]:
     rng = random.Random(seed) # definise randomness i paralelizam (dve trke pokrenute istovremeno bez rng imaju isti output na kraju)
 
-    msg = RaceMessage(
-        type=EventType.RACE_STARTED,
-        payload=f"The race has been started: {race.name}",
-    )
+    # INSERT MSG PUBLISHING
+
+    # napravi startedRace event
+    # serijalizuj event
+    # publishuj
+
+    raceGuid = uuid.uuid4()
+
+    for d in drivers:
+        driverGuid = uuid.uuid4()
+        startedRaceEvt = StartedRace(driverId=driverGuid, raceId=raceGuid)
+        startedRaceJson = startedRaceEvt.model_dump_json()
+        eventWrapper = EventWrapper(EventType="StartedRace", Payload=startedRaceJson, OcurredAt=datetime.now())
+        publishMsg(eventWrapper)
+
 
     for lap in range(1, race.laps + 1):
         # Iterira se preko kopije jer `drivers` menja duzinu unutar petlje.
@@ -63,7 +80,7 @@ def raceStart(
                 moved.add(attacker.driver_id)
 
 
-        rmq.publishMsg(msg.model_dump_json())
+        #rmq.publishMsg(msg.model_dump_json()) # FIX PUBLSHING MSG
 
     for position, driver in enumerate(drivers, start=1):
         driver.finished_position = position

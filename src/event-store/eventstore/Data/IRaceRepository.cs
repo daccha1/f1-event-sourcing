@@ -3,7 +3,7 @@ using eventstore.Models;
 
 namespace eventstore.Data
 {
-	public interface IMemoryStore
+	public interface IRaceRepository
 	{
 		public Race FinishRace(string id);
 		public Race Load(string raceId);

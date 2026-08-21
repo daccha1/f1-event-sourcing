@@ -6,7 +6,7 @@ namespace eventstore.Data
 	public interface IDriverRepository
 	{
 		public Driver Load(string driverId);
-		public Driver StartedTheRace(string driverId, string raceId);
+		public Task<Driver> StartedTheRace(string driverId, string raceId);
 		public Driver FinishedRace(string driverId, int position);
 		public Driver Overtook(string driverFront, string driverBehind);
 		public Driver Crashed(string driverId);
