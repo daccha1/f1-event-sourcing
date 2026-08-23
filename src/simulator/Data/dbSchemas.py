@@ -6,9 +6,11 @@ class Race(Base):
     __tablename__ = "races"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(nullable=False)
+    grandPrix: Mapped[str] = mapped_column(nullable=False)
+    country: Mapped[str] = mapped_column(nullable=False)
     laps: Mapped[int] = mapped_column(nullable=False)
     length: Mapped[float] = mapped_column(nullable=False)
+
     pit_number: Mapped[int] = mapped_column(default=2)
     pit_after: Mapped[int] = mapped_column(default=10)
 

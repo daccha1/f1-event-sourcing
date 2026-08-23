@@ -16,25 +16,27 @@ namespace eventstore.Repositories
 		}
 		
 
-		public Race FinishRace(string id)
+		public async Task<Race> FinishRace(string id)
 		{
-			var race = Load(id);
+			var race = await Load(id);
 			race = Race.FinishRace(race);
 			_context.Events.AddRange(race.DequeueUnsavedEvents());
+			await _context.SaveChangesAsync();
 			return race;
 		}
 
-		public Race StopRace(string id, int lap)
+		public async Task<Race> StopRace(string id, int lap)
 		{
-			var race = Load(id);
+			var race = await Load(id);
 			race = Race.StopRace(race, lap);
 			_context.Events.AddRange(race.DequeueUnsavedEvents());
+			await _context.SaveChangesAsync();
 			return race;
 		}
 
-		public Race Load(string raceId)
+		public async Task<Race> Load(string raceId)
 		{
-			var evts = _context.Events.Where(e => e.RootId == raceId).ToList();
+			var evts = await _context.Events.Where(e => e.RootId == raceId).ToListAsync();
 			if(evts.Count == 0)
 			{
 				throw new Exception("List is empty");
@@ -45,10 +47,11 @@ namespace eventstore.Repositories
 			return r;
 		}
 		
-		public Race AddNew(string id, string ctr, string gp, int laps)
+		public async Task<Race> AddNew(string id, string ctr, string gp, int laps)
 		{
 			var race = Race.Create(id, ctr, gp, laps);
 			_context.Events.AddRange(race.DequeueUnsavedEvents());
+			await _context.SaveChangesAsync();
 			return race;
 		}
 

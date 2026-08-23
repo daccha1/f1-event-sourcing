@@ -7,9 +7,10 @@ namespace eventstore.Controllers
 
 	public partial class ControllerHelper
 	{
+		public record Driver_Crashed(Guid driverId, DateTime occurredAt);
 		public record Driver_Overtook(Guid driverFront, Guid driverBehind);
 		public record Driver_FinishedRace(Guid driverId, Guid raceId, int position);
-		public record Driver_StartRace(Guid driverId, Guid raceId);
+		public record Driver_StartRace(Guid driverId, Guid raceId, string name, string team);
 		public record Driver_Disqualify(Guid driverId, string reason);
 		public record Driver_Pitted(Guid driverId, char tyreType);
 	}
@@ -43,7 +44,7 @@ namespace eventstore.Controllers
 		[HttpGet("{driverId:guid}")]
 		public IActionResult LoadDriver([FromRoute] Guid driverId)
 		{
-			string str_driver = driverId.ToString("N");
+			string str_driver = driverId.ToString();
 			var d = _repo.Load(str_driver);
 			return Ok(d);
 		}
@@ -60,29 +61,29 @@ namespace eventstore.Controllers
 
 		
 		[HttpPost("overtake")]
-		public IActionResult Overtook([FromBody] ControllerHelper.Driver_Overtook information)
+		public async Task<IActionResult> Overtook([FromBody] ControllerHelper.Driver_Overtook information)
 		{
 			string driver_front = information.driverFront.ToString("N");
 			string driver_behind = information.driverBehind.ToString("N");
 
-			Driver d = _repo.Overtook(driver_front, driver_behind);
+			Driver d = await _repo.Overtook(driver_front, driver_behind);
 
 			return Ok(d);
 		}
 
 		[HttpPost("disqualify")]
-		public IActionResult Disqualified([FromBody] ControllerHelper.Driver_Disqualify information)
+		public async Task<IActionResult> Disqualified([FromBody] ControllerHelper.Driver_Disqualify information)
 		{
 			string driverId = information.driverId.ToString("N");
-			Driver d = _repo.Disqualified(driverId, information.reason);
+			Driver d = await _repo.Disqualified(driverId, information.reason);
 			return Ok(d);
 		}
 
 		[HttpPost("pit")]
-		public IActionResult Pitted([FromBody] ControllerHelper.Driver_Pitted information)
+		public async Task<IActionResult> Pitted([FromBody] ControllerHelper.Driver_Pitted information)
 		{
 			string driverId = information.driverId.ToString("N");
-			Driver d = _repo.Pitted(driverId, information.tyreType);
+			Driver d = await _repo.Pitted(driverId, information.tyreType);
 			return Ok(d);
 		}
 

@@ -185,7 +185,7 @@ def start_race(db: dbdep, id: int, seed: int | None = None):
     classification = raceStart(selected_circuit, grid, crashed_drivers, seed=seed)
 
     return {
-        'race': selected_circuit.name,
+        'race': selected_circuit.grandPrix,
         'seed': seed,
         'classification': [
             {'position': d.finished_position, 'driver_id': d.driver_id, 'name': d.name}
