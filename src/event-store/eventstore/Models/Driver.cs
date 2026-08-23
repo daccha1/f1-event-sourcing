@@ -14,6 +14,7 @@ namespace eventstore.Models
 	{
 		public string DriverId { get; set; }
 		public string CurrentRaceId { get; set; }
+		public string Name { get; set; }
 		public string CurrentTeam { get; set; }
 		public int PointsAwarded { get; set; }
 
@@ -47,15 +48,17 @@ namespace eventstore.Models
 		public string DisqualifyReason { get; set; }
 
 		
-
-		public static Driver StartedRace(string driverId, string raceId)
+		
+		public static Driver StartedRace(string driverId, string raceId, string name, string team)
 		{
 			var driver = new Driver();
-			
+
 			var evt = new StartedRace()
 			{
 				DriverId = driverId,
-				RaceId = raceId
+				RaceId = raceId,
+				Name = name,
+				Team = team
 			};
 
 			var baseEvt = new Event()
@@ -156,6 +159,25 @@ namespace eventstore.Models
 			return d;
 		}
 
+		public static Driver Crashed(Driver d, DateTime CrashedAt)
+		{
+			var evt = new Crashed()
+			{
+				DriverId = d.DriverId,
+				OccurredAt = CrashedAt
+			};
+
+			var baseEvt = new Event()
+			{
+				EventType = "Crashed",
+				Payload = Event.Serialize<Crashed>(evt),
+				RootId = d.DriverId
+			};
+
+			d.RaiseEvent(baseEvt);
+			return d;
+		}
+
 		public static Driver GotDisqualified(Driver d, string reason)
 		{
 			var evt = new Disqualified()
@@ -187,6 +209,8 @@ namespace eventstore.Models
 					StartingPosition = 1;
 					HasStarted = true;
 					StartedAt = DateTime.UtcNow; // needs to be in payload
+					Name = startedRace.Name;
+					CurrentTeam = startedRace.Team;
 					break;
 				case "FinishedRace":
 					var finishedRace = Event.Deserialize<FinishedRace>(baseEvt.Payload);
@@ -210,10 +234,18 @@ namespace eventstore.Models
 					Disqualified = true;
 					DisqualifyReason = driverDisqualified.Reason;
 					break;
-				case "	":
+				case "Pitted":
 					var driverPitted = Event.Deserialize<Pitted>(baseEvt.Payload);
 					NumberOfPits++;
 					CurrentTyres = (TyreType) ResolveTyreType(driverPitted.TyreType);
+					break;
+				case "Crashed":
+					var driverCrashed = Event.Deserialize<Crashed>(baseEvt.Payload);
+					HasCrashed = true;
+					CrashedAt = driverCrashed.OccurredAt;
+					CurrentPosition = -1;
+					PointsAwarded = 0;
+					
 					break;
 				default:
 					throw new Exception("Unrecognized event type.");

@@ -24,7 +24,12 @@ namespace eventstore.Events
 
 		public static T Deserialize<T>(string jsonString)
 		{
-			T obj = JsonSerializer.Deserialize<T>(jsonString);
+			var options = new JsonSerializerOptions
+			{
+				PropertyNameCaseInsensitive = true
+			};
+
+			T obj = JsonSerializer.Deserialize<T>(jsonString, options);
 			return obj;
 		}
 

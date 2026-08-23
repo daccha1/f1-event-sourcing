@@ -15,9 +15,13 @@ namespace eventstore.Repositories
 			_context = db;
 		}
 		
-		public async Task<Driver> Crashed(string driverId)
+		public async Task<Driver> Crashed(string driverId, DateTime OccurredAt)
 		{
-			throw new NotImplementedException();
+			Driver d = await Load(driverId);
+			d = Driver.Crashed(d, OccurredAt);
+			await _context.Events.AddRangeAsync(d.DequeueUnsavedEvents());
+			await _context.SaveChangesAsync();
+			return d;
 		}
 
 		public async Task<Driver> Overtook(string driverFront, string driverBehind)
@@ -34,9 +38,9 @@ namespace eventstore.Repositories
 			return d2;
 		}
 
-		public async Task<Driver> StartedTheRace(string driverId, string raceId)
+		public async Task<Driver> StartedTheRace(string driverId, string raceId, string name, string team)
 		{
-			Driver d = Driver.StartedRace(driverId, raceId);
+			Driver d = Driver.StartedRace(driverId, raceId, name, team);
 			await _context.Events.AddRangeAsync(d.DequeueUnsavedEvents());
 			await _context.SaveChangesAsync();
 			return d;

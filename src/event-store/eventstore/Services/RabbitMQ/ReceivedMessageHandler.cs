@@ -36,7 +36,7 @@ namespace eventstore.Services.RabbitMQ
 			{
 				case "DriverStartedRace":
 					ControllerHelper.Driver_StartRace startRace = JsonSerializer.Deserialize<ControllerHelper.Driver_StartRace>(eventWrapper.Payload);
-					await _driverRepository.StartedTheRace(startRace.driverId.ToString(), startRace.raceId.ToString());
+					await _driverRepository.StartedTheRace(startRace.driverId.ToString(), startRace.raceId.ToString(), startRace.name, startRace.team);
 					break;
 				case "DriverFinishedRace":
 					ControllerHelper.Driver_FinishedRace driverFinishedRace = JsonSerializer.Deserialize<ControllerHelper.Driver_FinishedRace>(eventWrapper.Payload);
@@ -45,6 +45,10 @@ namespace eventstore.Services.RabbitMQ
 				case "DriverOvertook":
 					ControllerHelper.Driver_Overtook driverOvertook = JsonSerializer.Deserialize<ControllerHelper.Driver_Overtook>(eventWrapper.Payload);
 					await _driverRepository.Overtook(driverOvertook.driverFront.ToString(), driverOvertook.driverBehind.ToString());
+					break;
+				case "DriverCrashed":
+					ControllerHelper.Driver_Crashed driverCrashed = JsonSerializer.Deserialize<ControllerHelper.Driver_Crashed>(eventWrapper.Payload);
+					await _driverRepository.Crashed(driverCrashed.driverId.ToString(), driverCrashed.occurredAt);
 					break;
 				// to be added: Disqualified, Crashed, Pitted
 				// RACE EVENTS

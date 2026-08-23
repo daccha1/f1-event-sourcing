@@ -7,9 +7,10 @@ namespace eventstore.Controllers
 
 	public partial class ControllerHelper
 	{
+		public record Driver_Crashed(Guid driverId, DateTime occurredAt);
 		public record Driver_Overtook(Guid driverFront, Guid driverBehind);
 		public record Driver_FinishedRace(Guid driverId, Guid raceId, int position);
-		public record Driver_StartRace(Guid driverId, Guid raceId);
+		public record Driver_StartRace(Guid driverId, Guid raceId, string name, string team);
 		public record Driver_Disqualify(Guid driverId, string reason);
 		public record Driver_Pitted(Guid driverId, char tyreType);
 	}

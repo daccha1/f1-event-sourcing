@@ -1,6 +1,7 @@
 import uuid
 from uuid import UUID
 
+from datetime import datetime
 from pydantic import BaseModel, Field
 
 # These events get serialized in JSON format
@@ -14,6 +15,8 @@ from pydantic import BaseModel, Field
 class DriverStartedRace(BaseModel):
     driverId : UUID
     raceId: UUID
+    name: str
+    team: str
 
 class DriverFinishedRace(BaseModel):
     driverId: UUID
@@ -27,6 +30,10 @@ class DriverOvertook(BaseModel):
 class DriverDisqualified(BaseModel):
     driverId: UUID
     reason: str
+
+class DriverCrashed(BaseModel):
+    driverId: UUID
+    occurredAt: datetime
 
 class DriverPitted(BaseModel):
     driverId: UUID

@@ -8,7 +8,7 @@ from Events.RaceEvents.race_events import CreateRace, FinishRace, StopRace
 from Models.models import RacingDriver
 from Services.RabbitMQ import messageQueueService as rmq
 from Events.DriverEvents import driver_events
-from Events.DriverEvents.driver_events import DriverStartedRace, DriverFinishedRace, DriverOvertook, DriverPitted, DriverDisqualified
+from Events.DriverEvents.driver_events import DriverStartedRace, DriverFinishedRace, DriverOvertook, DriverCrashed, DriverPitted, DriverDisqualified
 import uuid
 from Services.RabbitMQ.messageQueueService import publishMsg
 
@@ -64,7 +64,7 @@ def raceStart(
         driverGuid = uuid.uuid4()
         d.correlation = driverGuid
         # publish: DriverStartedRace
-        startedRaceEvt = DriverStartedRace(driverId=driverGuid, raceId=raceGuid)
+        startedRaceEvt = DriverStartedRace(driverId=driverGuid, raceId=raceGuid, name=d.name, team=d.team)
         startedRaceJson = startedRaceEvt.model_dump_json()
         eventWrapper = EventWrapper(EventType="DriverStartedRace", Payload=startedRaceJson, OcurredAt=datetime.now())
         publishMsg(eventWrapper)
@@ -77,6 +77,17 @@ def raceStart(
                 driver.crashed_on_lap = lap
                 crashed.append(driver)
                 drivers.remove(driver)
+                driverCrashedEvt = DriverCrashed(
+                    driverId=driver.correlation,
+                    occurredAt=datetime.now()
+                )
+                json_driverCrashedEvt = driverCrashedEvt.model_dump_json()
+                wrapper_driverCrashedEvt = EventWrapper(
+                    EventType="DriverCrashed",
+                    OcurredAt=driverCrashedEvt.occurredAt,
+                    Payload=json_driverCrashedEvt
+                )
+                publishMsg(wrapper_driverCrashedEvt)
                 continue
             driver.crash_coeff += CRASH_RISK_PER_LAP
             driver.pit_coeff += 0.04
