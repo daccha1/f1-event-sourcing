@@ -11,11 +11,11 @@ from pydantic import BaseModel, Field
 # Disqualified
 # Pitted
 
-class StartedRace(BaseModel):
+class DriverStartedRace(BaseModel):
     driverId : UUID
     raceId: UUID
 
-class FinishedRace(BaseModel):
+class DriverFinishedRace(BaseModel):
     driverId: UUID
     raceId: UUID
     position: int
@@ -24,11 +24,11 @@ class DriverOvertook(BaseModel):
     driverFront: UUID
     driverBehind: UUID
 
-class Disqualified(BaseModel):
+class DriverDisqualified(BaseModel):
     driverId: UUID
     reason: str
 
-class Pitted(BaseModel):
+class DriverPitted(BaseModel):
     driverId: UUID
     tyreType: str = Field(..., min_length=1, max_length=1)
 

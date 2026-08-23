@@ -2,12 +2,13 @@ from datetime import datetime
 import json
 import random
 
-from Contracts.mq_contracts.race_messages import EventType, EventWrapper
+from Contracts.mq_contracts.race_messages import EventWrapper
 from Data.dbSchemas import Race
+from Events.RaceEvents.race_events import CreateRace, FinishRace, StopRace
 from Models.models import RacingDriver
 from Services.RabbitMQ import messageQueueService as rmq
 from Events.DriverEvents import driver_events
-from Events.DriverEvents.driver_events import StartedRace, FinishedRace, DriverOvertook, Pitted, Disqualified
+from Events.DriverEvents.driver_events import DriverStartedRace, DriverFinishedRace, DriverOvertook, DriverPitted, DriverDisqualified
 import uuid
 from Services.RabbitMQ.messageQueueService import publishMsg
 
@@ -38,22 +39,37 @@ def raceStart(
     seed: int | None = None,) -> list[RacingDriver]:
     rng = random.Random(seed) # definise randomness i paralelizam (dve trke pokrenute istovremeno bez rng imaju isti output na kraju)
 
-    # INSERT MSG PUBLISHING
 
-    # napravi startedRace event
-    # serijalizuj event
-    # publishuj
+    # DriverEvents:  Disqualified, Pitted, Crashed | CRASHED missing in event handling
 
     raceGuid = uuid.uuid4()
 
+    # publishing: RaceStart
+    raceCreatedEvt = CreateRace(
+        raceId=raceGuid,
+        country=race.country,
+        laps = race.laps,
+        gp = race.grandPrix
+    )
+    json_raceCreatedEvt = raceCreatedEvt.model_dump_json()
+    wrapper_raceCreatedEvt = EventWrapper(
+        EventType="RaceCreated",
+        Payload= json_raceCreatedEvt,
+        OcurredAt=datetime.now(),
+    )
+    publishMsg(wrapper_raceCreatedEvt)
+
+
     for d in drivers:
         driverGuid = uuid.uuid4()
-        startedRaceEvt = StartedRace(driverId=driverGuid, raceId=raceGuid)
+        d.correlation = driverGuid
+        # publish: DriverStartedRace
+        startedRaceEvt = DriverStartedRace(driverId=driverGuid, raceId=raceGuid)
         startedRaceJson = startedRaceEvt.model_dump_json()
-        eventWrapper = EventWrapper(EventType="StartedRace", Payload=startedRaceJson, OcurredAt=datetime.now())
+        eventWrapper = EventWrapper(EventType="DriverStartedRace", Payload=startedRaceJson, OcurredAt=datetime.now())
         publishMsg(eventWrapper)
 
-
+    # MAIN RACE SIMULATING LOGIC
     for lap in range(1, race.laps + 1):
         # Iterira se preko kopije jer `drivers` menja duzinu unutar petlje.
         for driver in list(drivers):
@@ -78,11 +94,51 @@ def raceStart(
                 attacker.crash_coeff += CRASH_RISK_PER_OVERTAKE
                 drivers[i - 1], drivers[i] = attacker, defender
                 moved.add(attacker.driver_id)
+                # publish: DriverOvertook
+                driverOvertookEvt = DriverOvertook(
+                    driverFront=attacker.correlation,
+                    driverBehind=defender.correlation
+                )
+                json_driverOvertookEvt = driverOvertookEvt.model_dump_json()
+                wrapper_driverOvertookEvt = EventWrapper(
+                    EventType="DriverOvertook",
+                    OcurredAt=datetime.now(),
+                    Payload=json_driverOvertookEvt
+                )
+                publishMsg(wrapper_driverOvertookEvt)
 
 
-        #rmq.publishMsg(msg.model_dump_json()) # FIX PUBLSHING MSG
+
+    # publish: RaceFinished
+    raceFinishedEvt = FinishRace(
+        raceId=raceGuid,
+    )
+    json_raceFinishedEvt = raceFinishedEvt.model_dump_json()
+    wrapper_raceFinishedEvt = EventWrapper(
+        EventType="RaceFinished",
+        Payload=json_raceFinishedEvt,
+        OcurredAt=datetime.now(),
+    )
+    publishMsg(wrapper_raceFinishedEvt)
+
+
+
+    #rmq.publishMsg(msg.model_dump_json()) # FIX PUBLSHING MSG
 
     for position, driver in enumerate(drivers, start=1):
+        driverFinishedRaceEvt = DriverFinishedRace(
+            raceId=raceGuid,
+            driverId = driver.correlation,
+            position=position
+        )
+        json_driverFinishedRaceEvt = driverFinishedRaceEvt.model_dump_json()
+        wrapper_driverFinishedRaceEvt = EventWrapper(
+            EventType="DriverFinishedRace", #driver finished race
+            OcurredAt=datetime.now(),
+            Payload=json_driverFinishedRaceEvt
+        )
+        publishMsg(wrapper_driverFinishedRaceEvt)
+
         driver.finished_position = position
 
     return drivers

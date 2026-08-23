@@ -14,6 +14,8 @@ namespace eventstore.Models
 	{
 		public string DriverId { get; set; }
 		public string CurrentRaceId { get; set; }
+		public string CurrentTeam { get; set; }
+		public int PointsAwarded { get; set; }
 
 		public int CurrentPosition { get; set; }
 		public TyreType CurrentTyres { get; set; } = TyreType.Medium;
@@ -208,7 +210,7 @@ namespace eventstore.Models
 					Disqualified = true;
 					DisqualifyReason = driverDisqualified.Reason;
 					break;
-				case "Pitted":
+				case "	":
 					var driverPitted = Event.Deserialize<Pitted>(baseEvt.Payload);
 					NumberOfPits++;
 					CurrentTyres = (TyreType) ResolveTyreType(driverPitted.TyreType);
