@@ -1,0 +1,8 @@
+.git
+.vs
+.vscode
+artifacts
+bin
+obj
+*.user
+*.md

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from math import floor
 
 class RaceRequest(BaseModel):
@@ -15,7 +15,7 @@ class RaceRequest(BaseModel):
 
 class RaceResponse(BaseModel):
     id: int
-    name: str
+    name: str = Field(validation_alias="grandPrix")
     laps: int
     length: float
     pit_number: int = 1  # laps/20

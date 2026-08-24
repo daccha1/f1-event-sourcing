@@ -5,6 +5,7 @@ using eventstore.Models;
 using eventstore.Repositories;
 using eventstore.Services.RabbitMQ;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi;
 using System.Diagnostics;
 
 namespace eventstore
@@ -24,6 +25,18 @@ namespace eventstore
 			
 			// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 			builder.Services.AddOpenApi();
+			builder.Services.AddSwaggerGen(options =>
+			{
+				options.SwaggerDoc("v1", new OpenApiInfo
+				{
+					Title = "F1 Event Store API",
+					Version = "v1",
+					Description = "API for recording Formula 1 race events and viewing race and championship statistics."
+				});
+
+				var xmlFileName = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+				options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFileName));
+			});
 
 			builder.Services.AddScoped<IRaceRepository, RaceRepository>();
 			builder.Services.AddScoped<IDriverRepository, DriversRepository>();
@@ -34,11 +47,21 @@ namespace eventstore
 			builder.Services.AddHostedService<MQBackgroundService>();
 
 			var app = builder.Build();
+			using (var scope = app.Services.CreateScope())
+			{
+				var dbContext = scope.ServiceProvider.GetRequiredService<EventStoreDbContext>();
+				dbContext.Database.Migrate();
+			}
 
 			// Configure the HTTP request pipeline.
 			if (app.Environment.IsDevelopment())
 			{
 				app.MapOpenApi();
+				app.UseSwagger();
+				app.UseSwaggerUI(options =>
+				{
+					options.SwaggerEndpoint("/swagger/v1/swagger.json", "F1 Event Store API v1");
+				});
 			}
 
 			app.UseHttpsRedirection();

@@ -25,6 +25,10 @@ namespace eventstore.Controllers
 			_repo = repo;
 		}
 		
+		/// <summary>
+		/// Records that a driver started a race.
+		/// </summary>
+		/// <param name="obj">The driver and race participation details.</param>
 		[HttpPost]
 		public IActionResult StartRace([FromBody] ControllerHelper.Driver_StartRace obj)
 		{
@@ -41,6 +45,10 @@ namespace eventstore.Controllers
 			}
 		}
 
+		/// <summary>
+		/// Rebuilds a driver's current state from its event stream.
+		/// </summary>
+		/// <param name="driverId">The race-specific driver identifier.</param>
 		[HttpGet("{driverId:guid}")]
 		public IActionResult LoadDriver([FromRoute] Guid driverId)
 		{
@@ -49,6 +57,10 @@ namespace eventstore.Controllers
 			return Ok(d);
 		}
 
+		/// <summary>
+		/// Records a driver's finishing position.
+		/// </summary>
+		/// <param name="obj">The driver, race, and final position.</param>
 		[HttpPost("finished")]
 		public IActionResult FinishedRace([FromBody] ControllerHelper.Driver_FinishedRace obj)
 		{
@@ -60,6 +72,10 @@ namespace eventstore.Controllers
 		}
 
 		
+		/// <summary>
+		/// Records an overtake between two drivers.
+		/// </summary>
+		/// <param name="information">The driver ahead and the driver attempting the overtake.</param>
 		[HttpPost("overtake")]
 		public async Task<IActionResult> Overtook([FromBody] ControllerHelper.Driver_Overtook information)
 		{
@@ -71,6 +87,10 @@ namespace eventstore.Controllers
 			return Ok(d);
 		}
 
+		/// <summary>
+		/// Disqualifies a driver from a race.
+		/// </summary>
+		/// <param name="information">The driver and disqualification reason.</param>
 		[HttpPost("disqualify")]
 		public async Task<IActionResult> Disqualified([FromBody] ControllerHelper.Driver_Disqualify information)
 		{
@@ -79,6 +99,10 @@ namespace eventstore.Controllers
 			return Ok(d);
 		}
 
+		/// <summary>
+		/// Records a driver's pit stop and tyre choice.
+		/// </summary>
+		/// <param name="information">The driver and tyre type.</param>
 		[HttpPost("pit")]
 		public async Task<IActionResult> Pitted([FromBody] ControllerHelper.Driver_Pitted information)
 		{

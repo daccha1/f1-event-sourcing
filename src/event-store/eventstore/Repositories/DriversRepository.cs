@@ -9,12 +9,12 @@ namespace eventstore.Repositories
 	public class DriversRepository : IDriverRepository
 	{
 		private EventStoreDbContext _context;
-		private List<Event> Events; 
+		private List<Event> Events;
 		public DriversRepository(EventStoreDbContext db)
 		{
 			_context = db;
 		}
-		
+
 		public async Task<Driver> Crashed(string driverId, DateTime OccurredAt)
 		{
 			Driver d = await Load(driverId);
@@ -33,7 +33,7 @@ namespace eventstore.Repositories
 			_context.Events.AddRange(d2.DequeueUnsavedEvents());
 			d1 = Driver.GotOvertaken(d1, driverBehind);
 			_context.Events.AddRange(d1.DequeueUnsavedEvents());
-			
+
 			await _context.SaveChangesAsync();
 			return d2;
 		}
@@ -100,6 +100,6 @@ namespace eventstore.Repositories
 			return driver;
 		}
 
-		
+
 	}
 }
