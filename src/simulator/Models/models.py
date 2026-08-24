@@ -1,4 +1,5 @@
-from pydantic import BaseModel, ConfigDict
+from dataclasses import dataclass
+from pydantic import BaseModel, ConfigDict, Field
 from math import floor
 
 class RaceRequest(BaseModel):
@@ -14,7 +15,7 @@ class RaceRequest(BaseModel):
 
 class RaceResponse(BaseModel):
     id: int
-    name: str
+    name: str = Field(validation_alias="grandPrix")
     laps: int
     length: float
     pit_number: int = 1  # laps/20
@@ -38,3 +39,18 @@ class DriverResponse(BaseModel):
     pits: int = 0
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# Runtime kopija vozaca za vreme trke, da simulacija ne menja ORM entitete.
+# eq=False: poredjenje po identitetu, da `list.remove()` ukloni bas taj objekat.
+@dataclass(eq=False)
+class RacingDriver:
+    driver_id: int
+    name: str
+    team: str
+    racing_coeff: float
+    crash_coeff: float = 0.0001
+    pit_coeff: float = 0.05
+    pits: int = 0
+    finished_position: int | None = None
+    crashed_on_lap: int | None = None

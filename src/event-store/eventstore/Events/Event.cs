@@ -4,16 +4,15 @@ namespace eventstore.Events
 {
 	public class Event
 	{
-		public string Id { get; }
+		public int Id { get; private set; }
 		public string RootId { get; set; }
-		public DateTime OccuredAt { get; } = DateTime.UtcNow;
+		public DateTime OccuredAt { get; private set; } = DateTime.UtcNow;
 
 		public string EventType { get; set; } // for deserialization
 		public string Payload { get; set; }	  // deserialization payload
 
 		public Event()
 		{
-			Id = Guid.NewGuid().ToString("N");
 			EventType = this.GetType().Name;
 		}
 
@@ -25,7 +24,12 @@ namespace eventstore.Events
 
 		public static T Deserialize<T>(string jsonString)
 		{
-			T obj = JsonSerializer.Deserialize<T>(jsonString);
+			var options = new JsonSerializerOptions
+			{
+				PropertyNameCaseInsensitive = true
+			};
+
+			T obj = JsonSerializer.Deserialize<T>(jsonString, options);
 			return obj;
 		}
 

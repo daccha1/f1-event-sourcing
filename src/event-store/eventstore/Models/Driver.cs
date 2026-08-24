@@ -12,12 +12,14 @@ namespace eventstore.Models
 	}
 	public class Driver : DomainRoot
 	{
-		public int Id { get; set; }
 		public string DriverId { get; set; }
 		public string CurrentRaceId { get; set; }
+		public string Name { get; set; }
+		public string CurrentTeam { get; set; }
+		public int PointsAwarded { get; set; }
 
 		public int CurrentPosition { get; set; }
-		public TyreType CurrentTyres = TyreType.Medium;
+		public TyreType CurrentTyres { get; set; } = TyreType.Medium;
 		
 		// START
 		public int StartingPosition { get; set; }
@@ -46,15 +48,17 @@ namespace eventstore.Models
 		public string DisqualifyReason { get; set; }
 
 		
-
-		public static Driver StartedRace(string driverId, string raceId)
+		
+		public static Driver StartedRace(string driverId, string raceId, string name, string team)
 		{
 			var driver = new Driver();
-			
+
 			var evt = new StartedRace()
 			{
 				DriverId = driverId,
-				RaceId = raceId
+				RaceId = raceId,
+				Name = name,
+				Team = team
 			};
 
 			var baseEvt = new Event()
@@ -127,6 +131,72 @@ namespace eventstore.Models
 			return d;
 		}
 
+		private TyreType ResolveTyreType(char type)
+		{
+			if (type == 'S') return TyreType.Soft;
+			if (type == 'M') return TyreType.Medium;
+			if (type == 'H') return TyreType.Hard;
+			if (type == 'W') return TyreType.Wet;
+			return TyreType.Soft;
+		}
+
+		public static Driver Pitted(Driver d, char tyreType)
+		{
+			var evt = new Pitted()
+			{
+				DriverId = d.DriverId,
+				TyreType = tyreType
+			};
+
+			var baseEvt = new Event()
+			{
+				EventType = evt.GetType().Name,
+				Payload = Event.Serialize<Pitted>(evt),
+				RootId = d.DriverId
+			};
+
+			d.RaiseEvent(baseEvt);
+			return d;
+		}
+
+		public static Driver Crashed(Driver d, DateTime CrashedAt)
+		{
+			var evt = new Crashed()
+			{
+				DriverId = d.DriverId,
+				OccurredAt = CrashedAt
+			};
+
+			var baseEvt = new Event()
+			{
+				EventType = "Crashed",
+				Payload = Event.Serialize<Crashed>(evt),
+				RootId = d.DriverId
+			};
+
+			d.RaiseEvent(baseEvt);
+			return d;
+		}
+
+		public static Driver GotDisqualified(Driver d, string reason)
+		{
+			var evt = new Disqualified()
+			{
+				DriverId = d.DriverId,
+				Reason = reason
+			};
+
+			var baseEvt = new Event()
+			{
+				EventType = evt.GetType().Name,
+				Payload = Event.Serialize<Disqualified>(evt),
+				RootId = d.DriverId
+			};
+
+			d.RaiseEvent(baseEvt);
+			return d;
+		}
+
 		protected override void Apply(Event baseEvt)
 		{
 			switch (baseEvt.EventType)
@@ -138,17 +208,19 @@ namespace eventstore.Models
 					CurrentPosition = 1;
 					StartingPosition = 1;
 					HasStarted = true;
-					StartedAt = DateTime.UtcNow;
+					StartedAt = DateTime.UtcNow; // needs to be in payload
+					Name = startedRace.Name;
+					CurrentTeam = startedRace.Team;
 					break;
 				case "FinishedRace":
 					var finishedRace = Event.Deserialize<FinishedRace>(baseEvt.Payload);
 					HasFinished = true;
 					FinishedAtPosition = finishedRace.FinishedAt;
-					FinishedAtTime = DateTime.UtcNow;
+					FinishedAtTime = DateTime.UtcNow; // needs to be in payload
 					break;
 				case "DriverOvertook":
 					var overtakenEvent = Event.Deserialize<DriverOvertook>(baseEvt.Payload);
-					CurrentPosition = CurrentPosition - 1;
+					CurrentPosition = CurrentPosition + 1;
 					NumberOfOvertakes++;
 					HasOvertaken.Add(overtakenEvent.TargetDriverId);
 					break;
@@ -156,6 +228,24 @@ namespace eventstore.Models
 					var gotOvertaken = Event.Deserialize<DriverOvertaken>(baseEvt.Payload);
 					CurrentPosition = CurrentPosition - 1;
 					OvertakenBy.Add(gotOvertaken.TargetDriverId);
+					break;
+				case "Disqualified":
+					var driverDisqualified= Event.Deserialize<Disqualified>(baseEvt.Payload);
+					Disqualified = true;
+					DisqualifyReason = driverDisqualified.Reason;
+					break;
+				case "Pitted":
+					var driverPitted = Event.Deserialize<Pitted>(baseEvt.Payload);
+					NumberOfPits++;
+					CurrentTyres = (TyreType) ResolveTyreType(driverPitted.TyreType);
+					break;
+				case "Crashed":
+					var driverCrashed = Event.Deserialize<Crashed>(baseEvt.Payload);
+					HasCrashed = true;
+					CrashedAt = driverCrashed.OccurredAt;
+					CurrentPosition = -1;
+					PointsAwarded = 0;
+					
 					break;
 				default:
 					throw new Exception("Unrecognized event type.");
