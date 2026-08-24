@@ -1,10 +1,11 @@
-name: f1-event-store
+name: f1-race-platform
 
 services:
   eventstore:
     build:
       context: .
       dockerfile: Dockerfile
+      target: eventstore
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
@@ -22,6 +23,31 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: simulator
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-eventstore}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-eventstore-password}
+    ports:
+      - "${SIMULATOR_PORT:-8000}:8000"
+    volumes:
+      - ./src/simulator/formula.db:/app/formula.db
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://localhost:8000/races')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
@@ -33,11 +59,7 @@ services:
     volumes:
       - sqlserver-data:/var/opt/mssql
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "SELECT 1" || exit 1',
-        ]
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q \"SELECT 1\" || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 20

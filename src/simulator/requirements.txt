@@ -1,0 +1,6 @@
+fastapi==0.141.1
+pika==1.4.2
+pydantic==2.13.4
+sentry-sdk==2.66.1
+SQLAlchemy==2.0.51
+uvicorn==0.52.1

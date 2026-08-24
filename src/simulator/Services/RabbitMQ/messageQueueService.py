@@ -1,3 +1,5 @@
+import os
+
 import pika
 from pika import exchange_type
 from pika.exchange_type import ExchangeType
@@ -5,8 +7,18 @@ import json
 
 from Contracts.mq_contracts.race_messages import EventWrapper
 
-connection = pika.BlockingConnection(
-    pika.ConnectionParameters(host='localhost'))
+rabbitmq_host = os.getenv("RABBITMQ_HOST", "localhost")
+rabbitmq_port = int(os.getenv("RABBITMQ_PORT", "5672"))
+rabbitmq_username = os.getenv("RABBITMQ_USERNAME", "guest")
+rabbitmq_password = os.getenv("RABBITMQ_PASSWORD", "guest")
+
+connection = pika.BlockingConnection(pika.ConnectionParameters(
+    host=rabbitmq_host,
+    port=rabbitmq_port,
+    credentials=pika.PlainCredentials(rabbitmq_username, rabbitmq_password),
+    connection_attempts=10,
+    retry_delay=3,
+))
 channel = connection.channel()
 
 race_exchange = "simulatorExchange"
