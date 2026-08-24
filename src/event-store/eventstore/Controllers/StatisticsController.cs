@@ -9,6 +9,9 @@ using System.Text.Json;
 
 namespace eventstore.Controllers
 {
+		/// <summary>
+		/// Returns the current driver championship standings calculated from all completed races.
+		/// </summary>
 	public partial class ControllerHelper
 	{
 		public record Driver(string rootId, string name, string team)
@@ -22,8 +25,6 @@ namespace eventstore.Controllers
 
 		public record ConstructorStanding(string team, int points, List<Driver> drivers);
 
-
-
 		public record TestDriver(string name, string team, int points)
 		{
 			public int points { get; set; } = 0;
@@ -36,7 +37,7 @@ namespace eventstore.Controllers
 	public class StatisticsController(IDriverRepository driverRepo, IRaceRepository raceRepo, EventStoreDbContext context) : ControllerBase
 	{
 
-		public int HandlePointDistribution(int position)
+		private static int HandlePointDistribution(int position)
 		{
 			return position switch
 			{
@@ -97,6 +98,59 @@ namespace eventstore.Controllers
 		//	}
 
 		//	return Ok(drivers);
+		//}
+
+		//[HttpGet("scores")]
+		//public async Task<ActionResult> GetDrivers()
+		//{
+		//	List<ControllerHelper.TestDriver> mainDrivers = new();
+
+		//	var races = await context.Events.Where(evt => evt.EventType == "RaceCreated").ToListAsync();
+
+		//	foreach(var race in races)
+		//	{
+		//		var raceId = race.RootId;
+
+		//		var driversInRace = await context.Events.Where(evt => evt.EventType == "StartedRace").ToListAsync();
+
+		//		//.Select(evt => JsonSerializer.Deserialize<ControllerHelper.Driver_StartRace>(evt.Payload)).Where(evt => evt.raceId.ToString() == raceId).ToListAsync();
+
+		//		List<ControllerHelper.Driver_StartRace> driversInRaceEvts = new();
+
+		//		foreach(var driver in driversInRace)
+		//		{
+		//			var evt = JsonSerializer.Deserialize<ControllerHelper.Driver_StartRace>(driver.Payload);
+
+		//		}
+
+
+		//		foreach (var driver in driversInRace)
+		//		{
+		//			ControllerHelper.TestDriver td = new(driver.name, driver.team, 0);
+		//			td.rootId = driver.driverId.ToString();
+
+		//			if(mainDrivers.Any(driver => driver.name == td.name && driver.team == td.team))
+		//			{
+		//				mainDrivers.Where(driver => driver.name == td.name && driver.team == td.team).FirstOrDefault().rootId = td.rootId;
+		//			}
+		//			else
+		//			{
+		//				mainDrivers.Add(td);
+		//			}
+
+		//			var finishStats = await context.Events.Where(evt => evt.EventType == "FinishedRace").Select(evt => JsonSerializer.Deserialize<ControllerHelper.Driver_FinishedRace>(evt.Payload)).Where(evt => evt.driverId.ToString() == td.rootId).FirstOrDefaultAsync();
+
+
+		//			mainDrivers.Where(d => d.rootId == td.rootId).FirstOrDefault().points += HandlePointDistribution(finishStats.position);
+
+		//			return Ok(mainDrivers);
+		//		}
+
+		//	}
+
+
+
+		//	return Ok();
 		//}
 
 		[HttpGet("scoreboard")]
@@ -187,6 +241,9 @@ namespace eventstore.Controllers
 			return Ok(drivers);
 		}
 
+		/// <summary>
+		/// Returns constructor standings calculated from their drivers' championship points.
+		/// </summary>
 		[HttpGet("constructors")]
 		public async Task<ActionResult> GetConstructorStandings()
 		{
@@ -320,59 +377,68 @@ namespace eventstore.Controllers
 			return Ok(constructors);
 		}
 
+		/// <summary>
+		/// Returns identifiers for all created races.
+		/// </summary>
+		[HttpGet("races")]
+		public async Task<ActionResult> GetAllRaces()
+		{
+			var racesBaseEvent = await context.Events.Where(evt => evt.EventType == "RaceCreated").ToListAsync();
 
-		//[HttpGet("scores")]
-		//public async Task<ActionResult> GetDrivers()
-		//{
-		//	List<ControllerHelper.TestDriver> mainDrivers = new();
+			var races = new List<ControllerHelper.CreateRace>();
 
-		//	var races = await context.Events.Where(evt => evt.EventType == "RaceCreated").ToListAsync();
-			
-		//	foreach(var race in races)
-		//	{
-		//		var raceId = race.RootId;
+			foreach(var race in racesBaseEvent)
+			{
+				races.Add(Event.Deserialize<ControllerHelper.CreateRace>(race.Payload));
+			}
 
-		//		var driversInRace = await context.Events.Where(evt => evt.EventType == "StartedRace").ToListAsync();
+			return Ok(races.Select(race => race.raceId));
+		}
+
+		/// <summary>
+		/// Returns drivers grouped by race.
+		/// </summary>
+		[HttpGet("race-drivers")]
+		public async Task<ActionResult> GetAllRacesDrivers()
+		{
+			var racesBaseEvent = await context.Events.Where(evt => evt.EventType == "RaceCreated").ToListAsync();
+
+			var races = new List<ControllerHelper.CreateRace>();
+			var allDriversDeserialized = new List<ControllerHelper.Driver_StartRace>();
+
+			var allDrivers = await context.Events.Where(evt => evt.EventType == "StartedRace").ToListAsync();
+
+			foreach(var driver in allDrivers)
+			{
+				allDriversDeserialized.Add(Event.Deserialize<ControllerHelper.Driver_StartRace>(driver.Payload));
+			}
+
+			foreach (var race in racesBaseEvent)
+			{
+				races.Add(Event.Deserialize<ControllerHelper.CreateRace>(race.Payload));
+			}
+
+			Dictionary<string, List<ControllerHelper.Driver_StartRace>> racesDrivers = new();
+
+			foreach(var race in races)
+			{
+				var drivers = allDriversDeserialized.Where(d => d.raceId == race.raceId).ToList();
+
+				racesDrivers.Add(race.raceId.ToString(), drivers);
+		
+
 				
-		//		//.Select(evt => JsonSerializer.Deserialize<ControllerHelper.Driver_StartRace>(evt.Payload)).Where(evt => evt.raceId.ToString() == raceId).ToListAsync();
+			}
 
-		//		List<ControllerHelper.Driver_StartRace> driversInRaceEvts = new();
+			return Ok(racesDrivers);
+		}
 
-		//		foreach(var driver in driversInRace)
-		//		{
-		//			var evt = JsonSerializer.Deserialize<ControllerHelper.Driver_StartRace>(driver.Payload);
-
-		//		}
-
-
-		//		foreach (var driver in driversInRace)
-		//		{
-		//			ControllerHelper.TestDriver td = new(driver.name, driver.team, 0);
-		//			td.rootId = driver.driverId.ToString();
-					
-		//			if(mainDrivers.Any(driver => driver.name == td.name && driver.team == td.team))
-		//			{
-		//				mainDrivers.Where(driver => driver.name == td.name && driver.team == td.team).FirstOrDefault().rootId = td.rootId;
-		//			}
-		//			else
-		//			{
-		//				mainDrivers.Add(td);
-		//			}
-
-		//			var finishStats = await context.Events.Where(evt => evt.EventType == "FinishedRace").Select(evt => JsonSerializer.Deserialize<ControllerHelper.Driver_FinishedRace>(evt.Payload)).Where(evt => evt.driverId.ToString() == td.rootId).FirstOrDefaultAsync();
-
-
-		//			mainDrivers.Where(d => d.rootId == td.rootId).FirstOrDefault().points += HandlePointDistribution(finishStats.position);
-
-		//			return Ok(mainDrivers);
-		//		}
-			
-		//	}
-
-
-
-		//	return Ok();
-		//}
-
+		[HttpGet("load-driver/{driverId:guid}")]
+		public IActionResult LoadDriver([FromRoute] Guid driverId)
+		{
+			string str_driver = driverId.ToString();
+			var d = driverRepo.Load(str_driver);
+			return Ok(d);
+		}
 	}
 }

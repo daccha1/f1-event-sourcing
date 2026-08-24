@@ -21,39 +21,55 @@ namespace eventstore.Controllers
 			this.races = races;
 		}
 
+		/// <summary>
+		/// Creates a race event stream.
+		/// </summary>
+		/// <param name="createRace">The race country, Grand Prix name, lap count, and identifier.</param>
 		[HttpPost]
-		public IActionResult CreateRace([FromBody] ControllerHelper.CreateRace createRace)
+		public async Task<ActionResult> CreateRace([FromBody] ControllerHelper.CreateRace createRace)
 		{
 			string raceIdentificator = createRace.raceId.ToString("N");
-			var r = races.AddNew(raceIdentificator, createRace.country, createRace.gp, createRace.laps);
+			var r = await races.AddNew(raceIdentificator, createRace.country, createRace.gp, createRace.laps);
 
 			return Ok(r);
 		}
 
+		/// <summary>
+		/// Marks a race as finished.
+		/// </summary>
+		/// <param name="finishRace">The race to finish.</param>
 		[HttpPost("finish")]
-		public IActionResult FinishRace([FromBody] ControllerHelper.FinishRace finishRace)
+		public async Task<ActionResult> FinishRace([FromBody] ControllerHelper.FinishRace finishRace)
 		{
 			string raceIdentificator = finishRace.raceId.ToString("N");
 
-			var r = races.FinishRace(raceIdentificator);
+			var r = await races.FinishRace(raceIdentificator);
 
 			return Ok(r);
 			
 		}
 
+		/// <summary>
+		/// Stops a race at the specified lap.
+		/// </summary>
+		/// <param name="stopRace">The race and lap where it was stopped.</param>
 		[HttpPost("stop")]
-		public IActionResult StopRace([FromBody] ControllerHelper.StopRace stopRace)
+		public async Task<ActionResult> StopRace([FromBody] ControllerHelper.StopRace stopRace)
 		{
 			string raceIdentificator = stopRace.raceId.ToString("N");
-			var r = races.StopRace(raceIdentificator, stopRace.lap);
+			var r = await races.StopRace(raceIdentificator, stopRace.lap);
 			return Ok(r);
 		}
 
+		/// <summary>
+		/// Rebuilds the current state of a race from its event stream.
+		/// </summary>
+		/// <param name="raceId">The race identifier.</param>
 		[HttpGet("{raceId:guid}")]
-		public IActionResult LoadRace([FromRoute] Guid raceId)
+		public async Task<ActionResult> LoadRace([FromRoute] Guid raceId)
 		{
 			string raceIdentificator = raceId.ToString("N");
-			var r = races.Load(raceIdentificator);
+			var r = await races.Load(raceIdentificator);
 
 			return Ok(r);
 		}

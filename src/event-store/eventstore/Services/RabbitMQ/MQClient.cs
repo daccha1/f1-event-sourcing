@@ -18,17 +18,25 @@ namespace eventstore.Services.RabbitMQ
 		public string raceRoutingKey = "raceroute";
 
 		IServiceScopeFactory _scopeFactory;
+		IConfiguration _configuration;
 
-		public MQClient(IServiceScopeFactory scopeFactory)
+		public MQClient(IServiceScopeFactory scopeFactory, IConfiguration configuration)
 		{
 			_scopeFactory = scopeFactory;
+			_configuration = configuration;
 		}
 
 		public async Task StartClient()
 		{
 			try
 			{
-				factory = new ConnectionFactory { HostName = "localhost"};
+				factory = new ConnectionFactory
+				{
+					HostName = _configuration["RabbitMq:Host"] ?? "localhost",
+					Port = int.TryParse(_configuration["RabbitMq:Port"], out var port) ? port : 5672,
+					UserName = _configuration["RabbitMq:Username"] ?? "guest",
+					Password = _configuration["RabbitMq:Password"] ?? "guest"
+				};
 				connection = await factory.CreateConnectionAsync();
 				channel = await connection.CreateChannelAsync();
 				consumer = new(channel);
