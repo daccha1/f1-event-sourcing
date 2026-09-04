@@ -68,7 +68,7 @@ namespace eventstore.Controllers
 		[HttpGet("{raceId:guid}")]
 		public async Task<ActionResult> LoadRace([FromRoute] Guid raceId)
 		{
-			string raceIdentificator = raceId.ToString("N");
+			string raceIdentificator = raceId.ToString();
 			var r = await races.Load(raceIdentificator);
 
 			return Ok(r);

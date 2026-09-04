@@ -1,11 +1,15 @@
-
+﻿
 using eventstore.Data;
 using eventstore.HostedServices;
 using eventstore.Models;
 using eventstore.Repositories;
+using eventstore.Services.Caching;
 using eventstore.Services.RabbitMQ;
+using eventstore.Services.Statistics;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.OpenApi;
+using StackExchange.Redis;
 using System.Diagnostics;
 
 namespace eventstore
@@ -38,8 +42,48 @@ namespace eventstore
 				options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFileName));
 			});
 
+			var redisConnectionString =
+				builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+
+			// AbortOnConnectFail keeps the API bootable when Redis is not up yet: reads fall
+			// back to the database instead of the whole service failing to start.
+			ConfigurationOptions BuildRedisOptions() => new()
+			{
+				EndPoints = { redisConnectionString },
+				AbortOnConnectFail = false,
+				ConnectRetry = 3,
+				// Short timeouts matter more than retries here: if Redis is unreachable the
+				// request should fall through to the database in about a second, not hang on
+				// the default ~5s connect plus ~5s command timeout.
+				ConnectTimeout = 1000,
+				SyncTimeout = 1000,
+				AsyncTimeout = 1000
+			};
+
+			builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
+				ConnectionMultiplexer.Connect(BuildRedisOptions()));
+
+			builder.Services.AddStackExchangeRedisCache(options =>
+			{
+				options.ConfigurationOptions = BuildRedisOptions();
+				options.InstanceName = "f1:";
+			});
+
+			// HybridCache puts an in-process layer in front of Redis and collapses concurrent
+			// misses into a single rebuild, so a burst of requests cannot stampede the replay.
+			builder.Services.AddHybridCache(options =>
+			{
+				options.DefaultEntryOptions = new HybridCacheEntryOptions
+				{
+					Expiration = TimeSpan.FromMinutes(10),
+					LocalCacheExpiration = TimeSpan.FromMinutes(2)
+				};
+			});
+
 			builder.Services.AddScoped<IRaceRepository, RaceRepository>();
 			builder.Services.AddScoped<IDriverRepository, DriversRepository>();
+			builder.Services.AddScoped<IStandingsProjection, StandingsProjection>();
+			builder.Services.AddSingleton<ICacheVersionProvider, RedisCacheVersionProvider>();
 			builder.Services.AddSingleton<MemoryDatabase>();
 			builder.Services.AddSingleton<IMQClient, MQClient>();
 			builder.Services.AddScoped<IReceivedMessageHandler, ReceivedMessageHandler>();
